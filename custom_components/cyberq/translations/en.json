@@ -2,18 +2,43 @@
     "config": {
 	"step": {
 	    "user": {
+		"description": "Username and password are only needed if your CyberQ prompts you to log in. The CyberQ has no HTTPS support, so these credentials are sent unencrypted over your network on every poll. Do not reuse a password from anywhere else.",
 		"data": {
 		    "host": "Hostname or IP address",
-		    "port": "Port"
+		    "port": "Port",
+		    "username": "Username",
+		    "password": "Password"
+		}
+	    },
+	    "reauth_confirm": {
+		"title": "Reauthenticate BBQ Guru CyberQ",
+		"description": "The CyberQ device rejected the stored credentials. Enter the current username and password.",
+		"data": {
+		    "username": "Username",
+		    "password": "Password"
+		}
+	    },
+	    "reconfigure": {
+		"title": "Reconfigure BBQ Guru CyberQ",
+		"description": "Username and password are only needed if your CyberQ prompts you to log in. The CyberQ has no HTTPS support, so these credentials are sent unencrypted over your network on every poll. Do not reuse a password from anywhere else.",
+		"data": {
+		    "host": "Hostname or IP address",
+		    "port": "Port",
+		    "username": "Username",
+		    "password": "Password"
 		}
 	    }
 	},
 	"error": {
 	    "cannot_connect": "Unable to connect to the CyberQ device.",
+	    "invalid_auth": "Invalid authentication",
 	    "unknown": "Unknown error occurred."
 	},
 	"abort": {
-	    "already_configured": "This entry is already configured."
+	    "already_configured": "This entry is already configured.",
+	    "reauth_successful": "Re-authentication was successful",
+	    "reconfigure_successful": "Re-configuration was successful",
+	    "unique_id_mismatch": "The device at this address reports a different serial number. Reconfigure the existing entry to point at the same CyberQ, or add the other device as a new entry."
 	}
     },
     "entity": {

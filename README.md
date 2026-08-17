@@ -66,7 +66,19 @@ Support Pages][bbq_guru_support] to connect your device to your WiFi
 network in Infrastructure Mode.
 1. Make note of the IP address and port number (defaults to 80) of
    your CyberQ.
-   
+1. If your CyberQ has a username and password configured (you are
+   prompted to log in when you browse to it), have those credentials
+   ready. They are optional and only needed if your device requires
+   them.
+
+> [!WARNING]
+> The CyberQ only speaks plain HTTP, so it can only authenticate with
+> HTTP Basic Auth. Your username and password are sent unencrypted on
+> every poll — that is roughly every 5 seconds — and anyone able to
+> observe traffic on your network can read them. Use a password unique
+> to the CyberQ, never one you use anywhere else, and keep the device
+> on a trusted network segment.
+
 {% include integrations/config_flow.md %}
 
 ## Data updates

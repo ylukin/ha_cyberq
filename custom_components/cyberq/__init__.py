@@ -29,14 +29,21 @@ from __future__ import annotations
 import logging
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PORT, Platform
+from homeassistant.const import (
+    CONF_HOST,
+    CONF_PASSWORD,
+    CONF_PORT,
+    CONF_USERNAME,
+    Platform,
+)
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
 
 from .const import DOMAIN
 from .coordinator import CyberqDataUpdateCoordinator
-from .cyberq import CyberqDevice
+from .cyberq import CyberqAuthenticationError, CyberqDevice
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -56,14 +63,20 @@ type CyberqConfigEntry = ConfigEntry[CyberqDataUpdateCoordinator]
 
 async def async_setup_entry(hass: HomeAssistant, entry: CyberqConfigEntry) -> bool:
     """Set up BBQ Guru CyberQ Integration from a config entry."""
-    coordinator = CyberqDataUpdateCoordinator(
-        hass,
-        CyberqDevice(
+    try:
+        device = CyberqDevice(
             host=entry.data[CONF_HOST],
             port=entry.data[CONF_PORT],
+            username=entry.data.get(CONF_USERNAME),
+            password=entry.data.get(CONF_PASSWORD),
             session=async_get_clientsession(hass),
-        ),
-    )
+        )
+    except CyberqAuthenticationError as error:
+        # Stored credentials that cannot form a valid header: prompt for new
+        # ones rather than failing setup with a traceback.
+        raise ConfigEntryAuthFailed(error) from error
+
+    coordinator = CyberqDataUpdateCoordinator(hass, device)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
 

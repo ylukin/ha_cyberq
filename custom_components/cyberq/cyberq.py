@@ -28,10 +28,12 @@ import asyncio
 import copy
 import datetime
 import logging
+import os
 import re
 import sys
 import urllib.parse
 from enum import StrEnum
+from http import HTTPStatus
 from typing import Any, Final, Self
 
 import aiohttp
@@ -290,6 +292,10 @@ class CyberqSensorTemperature(CyberqSensor):
         return int(value)
 
 
+class CyberqAuthenticationError(Exception):
+    """Raised when the CyberQ device rejects the provided credentials."""
+
+
 _STATUS_VALUES: Final = [
     "ok",
     "high",
@@ -480,7 +486,12 @@ class CyberqDevice:
     cyberq_cloud: bool = False
 
     def __init__(
-        self, host: str, session: aiohttp.ClientSession, port: int = 80
+        self,
+        host: str,
+        session: aiohttp.ClientSession,
+        port: int = 80,
+        username: str | None = None,
+        password: str | None = None,
     ) -> None:
         """Init the CyberQ."""
         self._session = session
@@ -488,21 +499,43 @@ class CyberqDevice:
         self.port = port
         self._base_url = f"http://{host}:{port}"
         self._last_config: datetime.datetime | None = None
+        self._auth = self._basic_auth(username, password)
 
         self._index_url = urllib.parse.urljoin(self._base_url, "index.htm")
         self._status_url = urllib.parse.urljoin(self._base_url, "status.xml")
         self._config_xml = urllib.parse.urljoin(self._base_url, "config.xml")
         self._wifi_url = urllib.parse.urljoin(self._base_url, "wifi.htm")
 
+    @staticmethod
+    def _basic_auth(
+        username: str | None, password: str | None
+    ) -> aiohttp.BasicAuth | None:
+        """
+        Build the Basic Auth credentials, if any were supplied.
+
+        Either field on its own is passed through rather than silently dropped,
+        so a half-filled pair fails as an authentication error the user can see.
+        """
+        if not username and not password:
+            return None
+        try:
+            return aiohttp.BasicAuth(username or "", password or "")
+        except ValueError as error:
+            raise CyberqAuthenticationError(str(error)) from error
+
     async def _post(self, url: str, data: dict) -> str:
         """Update a value."""
-        async with self._session.post(url, data=data) as response:
+        async with self._session.post(url, data=data, auth=self._auth) as response:
+            if response.status == HTTPStatus.UNAUTHORIZED:
+                raise CyberqAuthenticationError(f"Authentication failed for {url}")
             response.raise_for_status()
             return await response.text()
 
     async def _get(self, url: str) -> str:
         """Get a response data."""
-        async with self._session.get(url) as response:
+        async with self._session.get(url, auth=self._auth) as response:
+            if response.status == HTTPStatus.UNAUTHORIZED:
+                raise CyberqAuthenticationError(f"Authentication failed for {url}")
             response.raise_for_status()
             return await response.text()
 
@@ -730,6 +763,23 @@ if __name__ == "__main__":
             help="Port the controller is listening on",
         )
         group.add_argument(
+            "--username",
+            "-u",
+            dest="username",
+            default=os.environ.get("CYBERQ_USERNAME"),
+            help="Username for the controller, if it requires authentication"
+            " (default: $CYBERQ_USERNAME)",
+        )
+        group.add_argument(
+            "--password",
+            "-P",
+            dest="password",
+            default=os.environ.get("CYBERQ_PASSWORD"),
+            help="Password for the controller, if it requires authentication."
+            " Prefer $CYBERQ_PASSWORD, as an argument is visible to other users"
+            " in the process list and is saved to your shell history",
+        )
+        group.add_argument(
             "settings",
             default=[],
             nargs="*",
@@ -773,7 +823,13 @@ if __name__ == "__main__":
         async with aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=10)
         ) as session:
-            cyberq = CyberqDevice(options.host, port=options.port, session=session)
+            cyberq = CyberqDevice(
+                options.host,
+                port=options.port,
+                username=options.username,
+                password=options.password,
+                session=session,
+            )
             await cyberq.async_update()
 
             if options.settings:
@@ -798,6 +854,9 @@ if __name__ == "__main__":
 
     try:
         sys.exit(asyncio.run(main()))
+    except CyberqAuthenticationError as error:
+        print(f"Authentication failed: {error}", file=sys.stderr)  # noqa: T201
+        sys.exit(1)
     except KeyboardInterrupt:
         print()  # noqa: T201
         sys.exit(1)

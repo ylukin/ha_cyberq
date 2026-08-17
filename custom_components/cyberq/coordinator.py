@@ -30,11 +30,12 @@ from xml.parsers.expat import ExpatError
 
 import aiohttp
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, UPDATE_INTERVAL
-from .cyberq import CyberqDevice, CyberqSensors
+from .cyberq import CyberqAuthenticationError, CyberqDevice, CyberqSensors
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -62,6 +63,8 @@ class CyberqDataUpdateCoordinator(DataUpdateCoordinator[CyberqSensors]):
             async with timeout(20):
                 data = await self._device.async_update()
                 _LOGGER.debug(str(data))
+        except CyberqAuthenticationError as error:
+            raise ConfigEntryAuthFailed(error) from error
         except (
             TimeoutError,
             ExpatError,

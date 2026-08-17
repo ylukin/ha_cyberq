@@ -2,18 +2,43 @@
     "config": {
 	"step": {
 	    "user": {
+		"description": "Username and password are only needed if your CyberQ prompts you to log in. The CyberQ has no HTTPS support, so these credentials are sent unencrypted over your network on every poll. Do not reuse a password from anywhere else.",
 		"data": {
 		    "host": "[%key:common::config_flow::data::host%]",
-		    "port": "[%key:common::config_flow::data::port%]"
+		    "port": "[%key:common::config_flow::data::port%]",
+		    "username": "[%key:common::config_flow::data::username%]",
+		    "password": "[%key:common::config_flow::data::password%]"
+		}
+	    },
+	    "reauth_confirm": {
+		"title": "Reauthenticate BBQ Guru CyberQ",
+		"description": "The CyberQ device rejected the stored credentials. Enter the current username and password.",
+		"data": {
+		    "username": "[%key:common::config_flow::data::username%]",
+		    "password": "[%key:common::config_flow::data::password%]"
+		}
+	    },
+	    "reconfigure": {
+		"title": "Reconfigure BBQ Guru CyberQ",
+		"description": "[%key:component::cyberq::config::step::user::description%]",
+		"data": {
+		    "host": "[%key:common::config_flow::data::host%]",
+		    "port": "[%key:common::config_flow::data::port%]",
+		    "username": "[%key:common::config_flow::data::username%]",
+		    "password": "[%key:common::config_flow::data::password%]"
 		}
 	    }
 	},
 	"error": {
 	    "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+	    "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
 	    "unknown": "[%key:common::config_flow::error::unknown%]"
 	},
 	"abort": {
-	    "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+	    "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+	    "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]",
+	    "reconfigure_successful": "[%key:common::config_flow::abort::reconfigure_successful%]",
+	    "unique_id_mismatch": "The device at this address reports a different serial number. Reconfigure the existing entry to point at the same CyberQ, or add the other device as a new entry."
 	}
     },
     "entity": {
